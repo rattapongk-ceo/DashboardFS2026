@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard สถานะการปิดงบ รอบปี 2568</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f5f4f0; --surface:#fff; --surface2:#f0efe9;
+  --border:rgba(0,0,0,0.09); --border2:rgba(0,0,0,0.16);
+  --text:#1a1a18; --text2:#6b6b66; --text3:#9e9e99;
+  --success-bg:#EAF3DE; --success-fg:#3B6D11;
+  --info-bg:#E6F1FB;    --info-fg:#185FA5;
+  --warn-bg:#FAEEDA;    --warn-fg:#854F0B;
+  --pink-bg:#FBEAF0;    --pink-fg:#993556;
+  --purple-bg:#EEEDFE;  --purple-fg:#534AB7;
+  --gray-bg:#F1EFE8;    --gray-fg:#5F5E5A;
+  --danger-bg:#FCEBEB;  --danger-fg:#A32D2D;
+  --teal-bg:#E1F5EE;    --teal-fg:#0F6E56;
+  --orange-bg:#FEF3E2;  --orange-fg:#B45309;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#181816; --surface:#222220; --surface2:#2a2a28;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.14);
+  --text:#e8e7e0; --text2:#9e9e99; --text3:#6b6b66;
+  --success-bg:#173404; --success-fg:#C0DD97;
+  --info-bg:#042C53;    --info-fg:#B5D4F4;
+  --warn-bg:#412402;    --warn-fg:#FAC775;
+  --pink-bg:#4B1528;    --pink-fg:#F4C0D1;
+  --purple-bg:#26215C;  --purple-fg:#CECBF6;
+  --gray-bg:#2C2C2A;    --gray-fg:#D3D1C7;
+  --danger-bg:#501313;  --danger-fg:#F7C1C1;
+  --teal-bg:#04342C;    --teal-fg:#5DCAA5;
+  --orange-bg:#3D2000;  --orange-fg:#FBB954;
+}}
+body { background:var(--bg); color:var(--text); font-family:'Sarabun',system-ui,sans-serif; font-size:14px; line-height:1.6; padding:1.5rem; }
+
+/* Header */
+.hdr { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+.hdr h1 { font-size:18px; font-weight:600; }
+.hdr .sub { font-size:12px; color:var(--text2); margin-top:2px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; font-size:12px; font-family:inherit; border:0.5px solid var(--border2); border-radius:20px; background:transparent; color:var(--text2); cursor:pointer; white-space:nowrap; }
+.btn:hover { background:var(--surface2); }
+.btn.loading svg { animation:spin .8s linear infinite; }
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.banner { font-size:12px; padding:7px 12px; border-radius:8px; margin-bottom:1rem; display:none; }
+.banner.err  { background:var(--danger-bg); color:var(--danger-fg); display:block; }
+.banner.ok   { background:var(--success-bg); color:var(--success-fg); display:block; }
+.banner.info { background:var(--info-bg); color:var(--info-fg); display:block; }
+
+/* Summary cards — row 1: 3 cards, row 2: 4 cards */
+.cards { display:flex; flex-direction:column; gap:10px; margin-bottom:1.25rem; }
+.cards-row { display:grid; gap:10px; width:100%; }
+.cards-row-top    { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.cards-row-bottom { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.card  { background:var(--surface); border:0.5px solid var(--border); border-radius:10px; padding:.75rem 1rem; }
+.card .lbl { font-size:10px; color:var(--text2); margin-bottom:3px; line-height:1.3; }
+.card .num { font-size:20px; font-weight:600; }
+.card .sml { font-size:10px; color:var(--text3); margin-top:2px; }
+
+/* Main tabs */
+.main-tabs { display:flex; gap:0; margin-bottom:1.5rem; border-bottom:0.5px solid var(--border2); }
+.main-tab { padding:8px 20px; font-size:13px; font-family:inherit; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text2); cursor:pointer; margin-bottom:-0.5px; }
+.main-tab:hover { color:var(--text); }
+.main-tab.active { color:var(--info-fg); border-bottom-color:var(--info-fg); font-weight:600; }
+
+/* Filter tabs (inside tab 1) */
+.filter-tabs { display:flex; gap:6px; margin-bottom:1rem; flex-wrap:wrap; }
+.filter-tab  { padding:4px 12px; font-size:12px; border:0.5px solid var(--border2); border-radius:20px; cursor:pointer; background:transparent; color:var(--text2); font-family:inherit; }
+.filter-tab:hover  { background:var(--surface2); }
+.filter-tab.active { background:var(--info-bg); color:var(--info-fg); border-color:transparent; font-weight:600; }
+.cnt { font-size:11px; color:var(--text3); margin-left:3px; }
+
+.ctrl { display:flex; gap:8px; margin-bottom:1rem; flex-wrap:wrap; }
+.ctrl input, .ctrl select { padding:6px 10px; font-size:13px; border:0.5px solid var(--border2); border-radius:8px; background:var(--surface); color:var(--text); font-family:inherit; outline:none; }
+.ctrl input { flex:1; min-width:180px; }
+.ctrl input:focus, .ctrl select:focus { border-color:var(--info-fg); }
+
+/* Table */
+.tw { overflow-x:auto; border-radius:10px; border:0.5px solid var(--border); }
+table { width:100%; border-collapse:collapse; background:var(--surface); }
+th { text-align:left; padding:8px 10px; font-size:11px; font-weight:600; color:var(--text2); background:var(--surface2); border-bottom:0.5px solid var(--border); white-space:nowrap; }
+td { padding:7px 10px; border-bottom:0.5px solid var(--border); color:var(--text); vertical-align:middle; font-size:12.5px; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--surface2); }
+.name-col { max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sm { font-size:11px; color:var(--text2); white-space:nowrap; }
+.empty { text-align:center; padding:2.5rem; color:var(--text2); font-size:13px; }
+
+/* Badges */
+.badge      { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap; }
+/* Completed */
+.b-completed  { background:var(--success-bg); color:var(--success-fg); }
+/* In Progress */
+.b-inprogress { background:var(--info-bg);    color:var(--info-fg); }
+/* Filing Process */
+.b-filing     { background:var(--purple-bg);  color:var(--purple-fg); }
+/* Dued but not started */
+.b-dued       { background:var(--warn-bg);    color:var(--warn-fg); }
+/* Not to do */
+.b-nottodo    { background:var(--gray-bg);    color:var(--gray-fg); }
+
+.person { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; background:var(--surface2); color:var(--text2); border:0.5px solid var(--border); }
+
+/* Tab 2: Person stats */
+.person-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+.person-card { background:var(--surface); border:0.5px solid var(--border); border-radius:12px; padding:1rem 1.25rem; }
+.person-card h3 { font-size:14px; font-weight:600; margin-bottom:.75rem; display:flex; align-items:center; justify-content:space-between; }
+.person-card h3 span { font-size:11px; font-weight:400; color:var(--text2); }
+.stat-rows { display:flex; flex-direction:column; gap:6px; }
+.stat-row { display:flex; align-items:center; gap:8px; }
+.stat-label { font-size:11px; color:var(--text2); min-width:130px; }
+.stat-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:8px; overflow:hidden; }
+.stat-bar { height:8px; border-radius:4px; transition:width .4s; }
+.stat-pct { font-size:11px; color:var(--text2); min-width:32px; text-align:right; }
+.stat-count { font-size:11px; color:var(--text3); min-width:24px; text-align:right; }
+
+/* Tab 3: Progress */
+.progress-section { margin-bottom:2rem; }
+.section-title { font-size:14px; font-weight:600; margin-bottom:1rem; color:var(--text); }
+.chart-wrap { background:var(--surface); border:0.5px solid var(--border); border-radius:12px; padding:1.25rem; }
+.person-progress-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+.pp-card { background:var(--surface); border:0.5px solid var(--border); border-radius:10px; padding:1rem; }
+.pp-card h4 { font-size:13px; font-weight:600; margin-bottom:.6rem; display:flex; justify-content:space-between; }
+.pp-card h4 span { font-weight:400; color:var(--text2); font-size:11px; }
+.progress-bar-outer { background:var(--surface2); border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px; }
+.progress-bar-inner { height:10px; border-radius:6px; background:var(--success-fg); transition:width .5s; }
+.pp-detail { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11px; color:var(--text2); }
+.diff-badge { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:600; padding:1px 7px; border-radius:10px; }
+.diff-up   { background:var(--success-bg); color:var(--success-fg); }
+.diff-down { background:var(--danger-bg);  color:var(--danger-fg); }
+.diff-none { background:var(--gray-bg);    color:var(--gray-fg); }
+
+.no-data { text-align:center; padding:3rem; color:var(--text3); font-size:13px; }
+
+/* Group legend */
+.group-legend { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:1rem; }
+.legend-item { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text2); }
+.legend-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+@media(max-width:768px){
+  .cards-row-top    { grid-template-columns:repeat(3,1fr); }
+  .cards-row-bottom { grid-template-columns:repeat(2,1fr); }
+  body { padding:1rem; }
+}
+@media(max-width:480px){
+  .cards-row-top    { grid-template-columns:repeat(1,1fr); }
+  .cards-row-bottom { grid-template-columns:repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <h1>Dashboard สถานะการปิดงบ รอบปี 2568</h1>
+    <div class="sub" id="sub">กำลังโหลดข้อมูล...</div>
+  </div>
+  <button class="btn" id="reload-btn" onclick="loadData()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    รีเฟรชข้อมูล
+  </button>
+</div>
+
+<div class="banner" id="banner"></div>
+
+<div class="cards" id="cards">
+  <div class="cards-row cards-row-top">
+    <div class="card"><div class="lbl">ทั้งหมด</div><div class="num">—</div></div>
+    <div class="card"><div class="lbl">On Going</div><div class="num">—</div></div>
+    <div class="card"><div class="lbl">Discontinued</div><div class="num">—</div></div>
+  </div>
+  <div class="cards-row cards-row-bottom">
+    <div class="card"><div class="lbl">Completed</div><div class="num">—</div></div>
+    <div class="card"><div class="lbl">Filing Process</div><div class="num">—</div></div>
+    <div class="card"><div class="lbl">In Progress</div><div class="num">—</div></div>
+    <div class="card"><div class="lbl">Dued not started</div><div class="num">—</div></div>
+  </div>
+</div>
+
+<!-- Main navigation tabs -->
+<div class="main-tabs">
+  <button class="main-tab active" onclick="switchTab('table')">รายการทั้งหมด</button>
+  <button class="main-tab" onclick="switchTab('person')">สถิติรายคน</button>
+  <button class="main-tab" onclick="switchTab('progress')">ความคืบหน้า</button>
+</div>
+
+<!-- TAB 1: Table -->
+<div id="tab-table">
+  <div class="filter-tabs" id="filter-tabs"></div>
+  <div class="ctrl">
+    <input id="search" placeholder="ค้นหาชื่อบริษัท / รหัส..." oninput="renderTable()">
+    <select id="f-person" onchange="renderTable()"><option value="">ผู้รับผิดชอบ (ทั้งหมด)</option></select>
+    <select id="f-clientstatus" onchange="renderTable()">
+      <option value="">สถานะลูกค้า (ทั้งหมด)</option>
+      <option value="On Going">On Going</option>
+      <option value="Discontinued">Discontinued</option>
+    </select>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th>รหัส</th><th>บริษัท / ชื่อ</th><th>ประเภท</th><th>รอบปี</th>
+        <th>สถานะลูกค้า</th><th>สถานะปี 2568</th><th>Group</th><th>ผู้รับผิดชอบ</th><th>ผู้สอบบัญชี</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="9" class="empty">กำลังโหลด...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 2: Person stats -->
+<div id="tab-person" style="display:none">
+  <div class="person-grid" id="person-grid"></div>
+</div>
+
+<!-- TAB 3: Progress -->
+<div id="tab-progress" style="display:none">
+  <div class="progress-section">
+    <div class="section-title">ภาพรวม — ความคืบหน้าตามเวลา (บันทึกทุกครั้งที่รีเฟรช)</div>
+    <div class="chart-wrap">
+      <div style="position:relative;height:260px"><canvas id="ts-chart"></canvas></div>
+      <div id="ts-legend" style="margin-top:.75rem;display:flex;flex-wrap:wrap"></div>
+    </div>
+  </div>
+  <div class="progress-section">
+    <div class="section-title">ความคืบหน้ารายคน</div>
+    <div class="person-progress-grid" id="person-progress-grid"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbx-0UJtO2wH00HGcgCt4lOqF85Bi72UgC7wQwpI8kNS7MPKlwxky2cd-aoF8CIjlxyr/exec";
+const LS_HISTORY = "dash_history_v2";
+
+// ══════════════════════════════════════════════════════════════════
+//  STATUS CONFIG — ตรงกับ Database
+//  group values: "completed" | "filing" | "inprogress" | "dued" | "nottodo"
+// ══════════════════════════════════════════════════════════════════
+const STATUS_CFG = [
+  // ── Completed ──────────────────────────────────────────────────
+  { keys:["จัดส่งเก็บไฟล์"],          label:"จัดส่งเก็บไฟล์",            cls:"b-completed",  group:"completed" },
+  { keys:["ยื่น dbd rd"],              label:"ยื่น DBD RD",               cls:"b-completed",  group:"completed" },
+  { keys:["ลูกค้าปิดเอง"],             label:"ลูกค้าปิดเอง",              cls:"b-completed",  group:"completed" },
+  { keys:["จดปีแรก"],                  label:"จดปีแรก",                   cls:"b-completed",  group:"completed" },
+
+  // ── Filing Process ─────────────────────────────────────────────
+  { keys:["รอลูกค้าคอนเฟิมงบ","รอลูกค้าคอนเฟิม","รอคอนเฟิมงบ"],
+                                        label:"รอลูกค้าคอนเฟิมงบ",        cls:"b-filing",     group:"filing"    },
+  { keys:["ลูกค้าคอนเฟิมแล้วรอยื่น"],  label:"ลูกค้าคอนเฟิมแล้วรอยื่น",  cls:"b-filing",     group:"filing"    },
+  { keys:["รอผู้สอบคอนเฟิร์ม","รอผู้สอบคอนเฟิม"],
+                                        label:"รอผู้สอบคอนเฟิร์ม",        cls:"b-filing",     group:"filing"    },
+  { keys:["รอผู้สอบตรวจสอบข้อมูล"],    label:"รอผู้สอบตรวจสอบข้อมูล",    cls:"b-filing",     group:"filing"    },
+  { keys:["ยื่น dbd", "ยื่น rd"],      label:"ยื่น DBD / RD",             cls:"b-filing",     group:"filing"    },
+
+  // ── In Progress ────────────────────────────────────────────────
+  { keys:["กำลังปิดงบ"],               label:"กำลังปิดงบ",                cls:"b-inprogress", group:"inprogress" },
+  { keys:["ส่งให้ปานตรวจ"],            label:"ส่งให้ปานตรวจ",             cls:"b-inprogress", group:"inprogress" },
+  { keys:["ส่งพี่ให้พี่นิกตรวจ","ส่งให้นิกตรวจ"],
+                                        label:"ส่งพี่นิกตรวจ",             cls:"b-inprogress", group:"inprogress" },
+  { keys:["รีวิวแล้ว รอส่งให้ลูกค้า","รีวิวแล้วรอส่ง"],
+                                        label:"รีวิวแล้ว รอส่งลูกค้า",    cls:"b-inprogress", group:"inprogress" },
+
+  // ── Dued but not started ───────────────────────────────────────
+  { keys:["รอเอกสารจากลูกค้า","รอเอกสาร"],
+                                        label:"รอเอกสาร",                  cls:"b-dued",       group:"dued"      },
+  { keys:["ต้องปิดงบแล้ว","ลูกค้า confirmed","ลูกค้า confirm"],
+                                        label:"ต้องปิดงบแล้ว",             cls:"b-dued",       group:"dued"      },
+  { keys:["ได้รับข้อมูลแล้วจากธนาคาร","ได้รับข้อมูลแล้วจากลูกค้า","ได้รับข้อมูลแล้ว","ได้รับข้อมูล"],
+                                        label:"ได้รับข้อมูลแล้ว",          cls:"b-dued",       group:"dued"      },
+
+  // ── Not to do ──────────────────────────────────────────────────
+  { keys:["holding"],                   label:"Holding",                   cls:"b-nottodo",    group:"nottodo"   },
+  { keys:["บุคคลธรรมดา"],              label:"บุคคลธรรมดา",               cls:"b-nottodo",    group:"nottodo"   },
+  { keys:["ล่าช้า"],                    label:"ล่าช้า",                    cls:"b-nottodo",    group:"nottodo"   },
+  { keys:["ยกเลิก"],                    label:"ยกเลิก",                    cls:"b-nottodo",    group:"nottodo"   },
+  { keys:["to be confirm"],             label:"To Be Confirm",             cls:"b-nottodo",    group:"nottodo"   },
+  { keys:["ไม่ได้รับเอกสารตามกำหนด"],  label:"ไม่ได้รับตามกำหนด",         cls:"b-nottodo",    group:"nottodo"   },
+];
+
+// ── Filter groups (แท็บกรอง) ──────────────────────────────────────
+const FILTER_GROUPS = [
+  { key:"all",        label:"ทั้งหมด",              fn: r => true },
+  { key:"completed",  label:"✅ Completed",          fn: r => r.group==="completed"  },
+  { key:"filing",     label:"📋 Filing Process",     fn: r => r.group==="filing"     },
+  { key:"inprogress", label:"🔵 In Progress",        fn: r => r.group==="inprogress" },
+  { key:"dued",       label:"⏰ Dued not started",   fn: r => r.group==="dued"       },
+  { key:"nottodo",    label:"⛔ Not to do",           fn: r => r.group==="nottodo"    },
+];
+
+// Group display config
+const GROUP_CFG = {
+  completed:  { label:"Completed",          color:"#3B6D11", barColor:"#3B6D11" },
+  filing:     { label:"Filing Process",     color:"#534AB7", barColor:"#534AB7" },
+  inprogress: { label:"In Progress",        color:"#185FA5", barColor:"#185FA5" },
+  dued:       { label:"Dued not started",   color:"#854F0B", barColor:"#854F0B" },
+  nottodo:    { label:"Not to do",          color:"#5F5E5A", barColor:"#9e9e99"  },
+};
+
+// Badge class → group key (for classify fallback)
+const GROUP_KEYS = Object.keys(GROUP_CFG);
+
+let allData   = [];
+let activeFilter = "all";
+let activeMainTab = "table";
+let tsChart = null;
+
+// ── Classify status ───────────────────────────────────────────────
+function classify(raw) {
+  const s = (raw || "").toLowerCase().trim();
+  if (!s) return { label:"—", cls:"b-nottodo", group:"nottodo" };
+  for (const cfg of STATUS_CFG) {
+    if (cfg.keys.some(k => s.includes(k.toLowerCase()))) {
+      return { label:cfg.label, cls:cfg.cls, group:cfg.group };
+    }
+  }
+  // fallback
+  return { label:(raw||"—").trim(), cls:"b-nottodo", group:"nottodo" };
+}
+
+// ── History (Google Sheet "History" via Apps Script) ─────────────
+async function loadHistory() {
+  try {
+    const res  = await fetch(API_URL + "?action=history");
+    const json = await res.json();
+    return json.history || [];
+  } catch {
+    // fallback to localStorage if Sheet unreachable
+    try { return JSON.parse(localStorage.getItem(LS_HISTORY) || "[]"); } catch { return []; }
+  }
+}
+
+async function saveSnapshot(data) {
+  const todayKey = new Date().toISOString().slice(0,10);
+  const snap     = buildSnapshot(data, todayKey);
+
+  // บันทึกขึ้น Sheet
+  try {
+    const params = new URLSearchParams({
+      action: "saveHistory",
+      date:   todayKey,
+      groups: JSON.stringify({
+        completed:  snap.groups.completed  || 0,
+        filing:     snap.groups.filing     || 0,
+        inprogress: snap.groups.inprogress || 0,
+        dued:       snap.groups.dued       || 0,
+        nottodo:    snap.groups.nottodo    || 0,
+        total:      data.length
+      })
+    });
+    await fetch(API_URL + "?" + params.toString());
+  } catch(e) {
+    console.warn("saveHistory failed:", e);
+  }
+
+  // บันทึก localStorage ด้วยเป็น backup
+  try {
+    const local = JSON.parse(localStorage.getItem(LS_HISTORY) || "[]");
+    const idx   = local.findIndex(h => h.date === todayKey);
+    if (idx >= 0) local[idx] = snap; else local.push(snap);
+    while (local.length > 30) local.shift();
+    localStorage.setItem(LS_HISTORY, JSON.stringify(local));
+  } catch {}
+
+  // คืน history จาก Sheet
+  return await loadHistory();
+}
+function buildSnapshot(data, dateKey) {
+  const groups = {};
+  for (const r of data) {
+    groups[r.group] = (groups[r.group] || 0) + 1;
+  }
+  const personDone = {};
+  const personTotal = {};
+  for (const r of data) {
+    if (!r.responsible) continue;
+    personTotal[r.responsible] = (personTotal[r.responsible] || 0) + 1;
+    if (r.group === "completed") {
+      personDone[r.responsible] = (personDone[r.responsible] || 0) + 1;
+    }
+  }
+  return { date: dateKey, total: data.length, groups, personDone, personTotal };
+}
+
+// ── Fetch data ────────────────────────────────────────────────────
+async function loadData() {
+  const btn = document.getElementById("reload-btn");
+  btn.classList.add("loading");
+  showBanner("กำลังโหลดข้อมูล...", "info");
+  try {
+    const res  = await fetch(API_URL);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+
+    allData = (json.data || []).map(r => {
+      const { label, cls, group } = classify(r.stat2568);
+      return {
+        code:         r.code         || "",
+        name:         r.name         || "",
+        entityType:   r.entityType   || "",
+        workCycle:    r.workCycle     || "",
+        clientStatus: r.clientStatus  || "",
+        responsible:  r.responsible   || "",
+        auditor:      r.auditor       || "",
+        fyear:        r.fyear         || "",
+        stat2568:     r.stat2568      || "",
+        label, cls, group,
+      };
+    });
+
+    // Person dropdown
+    const persons = [...new Set(allData.map(r => r.responsible).filter(Boolean))].sort();
+    const sel = document.getElementById("f-person");
+    sel.innerHTML = '<option value="">ผู้รับผิดชอบ (ทั้งหมด)</option>';
+    persons.forEach(p => { const o = document.createElement("option"); o.value=p; o.textContent=p; sel.appendChild(o); });
+
+    const history = await saveSnapshot(allData);
+    buildCards();
+    renderFilterTabs();
+    renderTable();
+    renderPersonStats();
+    renderProgress(history);
+
+    const now = new Date().toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"});
+    document.getElementById("sub").textContent = `อัพเดตล่าสุด: ${now} — ${allData.length} รายการ`;
+    showBanner(`โหลดสำเร็จ ${allData.length} รายการ`, "ok");
+    setTimeout(() => document.getElementById("banner").style.display="none", 3000);
+  } catch(e) {
+    showBanner("❌ " + e.message, "err");
+    document.getElementById("sub").textContent = "โหลดล้มเหลว";
+  } finally {
+    btn.classList.remove("loading");
+  }
+}
+
+// ── Cards ─────────────────────────────────────────────────────────
+function buildCards() {
+  const t         = allData.length;
+  const ongoing   = allData.filter(r => r.clientStatus === "On Going").length;
+  const disco     = allData.filter(r => r.clientStatus === "Discontinued").length;
+  const ongoingRows = allData.filter(r => r.clientStatus === "On Going");
+  const completed = ongoingRows.filter(r => r.group === "completed").length;
+  const filing    = ongoingRows.filter(r => r.group === "filing").length;
+  const inprog    = ongoingRows.filter(r => r.group === "inprogress").length;
+  const dued      = ongoingRows.filter(r => r.group === "dued").length;
+  // % คำนวณจาก On Going เท่านั้น
+  const pct = v => ongoing ? Math.round(v/ongoing*100) : 0;
+  const pctAll = v => t ? Math.round(v/t*100) : 0;
+
+  document.getElementById("cards").innerHTML = `
+    <div class="cards-row cards-row-top">
+      <div class="card"><div class="lbl">ทั้งหมด</div><div class="num">${t}</div><div class="sml">รายการทั้งหมด</div></div>
+      <div class="card" style="border-color:rgba(34,139,34,0.35);background:linear-gradient(135deg,#f0faf0,var(--surface))">
+        <div class="lbl" style="color:#2d7d2d;font-weight:700">On Going</div>
+        <div class="num" style="color:#1a7a1a;font-size:28px">${ongoing}</div>
+        <div class="sml" style="color:#3B6D11">${pctAll(ongoing)}% ของทั้งหมด</div>
+      </div>
+      <div class="card" style="border-color:rgba(180,30,30,0.3);background:linear-gradient(135deg,#fff5f5,var(--surface))">
+        <div class="lbl" style="color:#b42020;font-weight:700">Discontinued</div>
+        <div class="num" style="color:#a32d2d;font-size:28px">${disco}</div>
+        <div class="sml" style="color:#A32D2D">${pctAll(disco)}% ของทั้งหมด</div>
+      </div>
+    </div>
+    <div class="cards-row cards-row-bottom">
+      <div class="card"><div class="lbl">✅ Completed</div><div class="num" style="color:var(--success-fg)">${completed}</div><div class="sml">${pct(completed)}% of On Going</div></div>
+      <div class="card"><div class="lbl">📋 Filing Process</div><div class="num" style="color:var(--purple-fg)">${filing}</div><div class="sml">${pct(filing)}% of On Going</div></div>
+      <div class="card"><div class="lbl">🔵 In Progress</div><div class="num" style="color:var(--info-fg)">${inprog}</div><div class="sml">${pct(inprog)}% of On Going</div></div>
+      <div class="card"><div class="lbl">⏰ Dued not started</div><div class="num" style="color:var(--warn-fg)">${dued}</div><div class="sml">${pct(dued)}% of On Going</div></div>
+    </div>
+  `;
+}
+
+// ── Tab 1: Table ──────────────────────────────────────────────────
+function renderFilterTabs() {
+  document.getElementById("filter-tabs").innerHTML = FILTER_GROUPS.map(g => {
+    const cnt = allData.filter(g.fn).length;
+    return `<button class="filter-tab ${activeFilter===g.key?'active':''}" onclick="setFilter('${g.key}')">${g.label}<span class="cnt">${cnt}</span></button>`;
+  }).join("");
+}
+
+function setFilter(k) { activeFilter = k; renderTable(); renderFilterTabs(); }
+
+function matchFilters(r) {
+  const q = document.getElementById("search").value.toLowerCase();
+  const p = document.getElementById("f-person").value;
+  const s = document.getElementById("f-clientstatus").value;
+  const g = FILTER_GROUPS.find(x => x.key === activeFilter);
+  return g.fn(r)
+    && (!q || r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q))
+    && (!p || r.responsible === p)
+    && (!s || r.clientStatus === s);
+}
+
+function groupBadgeHtml(group) {
+  const cfg = GROUP_CFG[group];
+  if (!cfg) return "";
+  const styleMap = {
+    completed:  "background:var(--success-bg);color:var(--success-fg)",
+    filing:     "background:var(--purple-bg);color:var(--purple-fg)",
+    inprogress: "background:var(--info-bg);color:var(--info-fg)",
+    dued:       "background:var(--warn-bg);color:var(--warn-fg)",
+    nottodo:    "background:var(--gray-bg);color:var(--gray-fg)",
+  };
+  return `<span class="badge" style="${styleMap[group]||''}">${cfg.label}</span>`;
+}
+
+function renderTable() {
+  const data = allData.filter(matchFilters);
+  document.getElementById("tbody").innerHTML = data.length === 0
+    ? `<tr><td colspan="9" class="empty">ไม่พบข้อมูล</td></tr>`
+    : data.map(r => `<tr>
+        <td class="sm">${r.code||"—"}</td>
+        <td class="name-col" title="${r.name}">${r.name||"—"}</td>
+        <td class="sm">${r.entityType||"—"}</td>
+        <td class="sm">${r.workCycle||"—"}</td>
+        <td class="sm">${r.clientStatus||"—"}</td>
+        <td><span class="badge ${r.cls}">${r.label}</span></td>
+        <td>${groupBadgeHtml(r.group)}</td>
+        <td><span class="person">${r.responsible||"—"}</span></td>
+        <td class="sm">${r.auditor||"—"}</td>
+      </tr>`).join("");
+}
+
+// ── Tab 2: Person stats ───────────────────────────────────────────
+function renderPersonStats() {
+  const persons = [...new Set(allData.map(r=>r.responsible).filter(Boolean))].sort();
+  const groupKeys = ["completed","filing","inprogress","dued","nottodo"];
+
+  document.getElementById("person-grid").innerHTML = persons.map(p => {
+    const rows = allData.filter(r => r.responsible === p);
+    const total = rows.length;
+    const onGoing = rows.filter(r=>r.clientStatus==="On Going").length;
+    const disco   = rows.filter(r=>r.clientStatus==="Discontinued").length;
+    const groupCounts = {};
+    for (const g of groupKeys) groupCounts[g] = rows.filter(r=>r.group===g).length;
+
+    const statRows = groupKeys.map(g => {
+      const cnt = groupCounts[g];
+      if (!cnt) return "";
+      // % คำนวณจาก On Going เท่านั้น
+      const pct = onGoing ? Math.round(cnt/onGoing*100) : 0;
+      const cfg = GROUP_CFG[g];
+      return `<div class="stat-row">
+        <span class="stat-label">${cfg.label}</span>
+        <div class="stat-bar-wrap"><div class="stat-bar" style="width:${Math.min(pct,100)}%;background:${cfg.barColor}"></div></div>
+        <span class="stat-pct">${pct}%</span>
+        <span class="stat-count">(${cnt})</span>
+      </div>`;
+    }).filter(Boolean).join("");
+
+    // % Completed คำนวณจาก On Going
+    const donePct = onGoing ? Math.round((groupCounts.completed||0)/onGoing*100) : 0;
+
+    return `<div class="person-card">
+      <h3>${p} <span>${total} รายการ | Completed ${donePct}%</span></h3>
+      <div style="display:flex;gap:8px;margin-bottom:.75rem;font-size:11px">
+        <span style="color:var(--success-fg)">On Going: ${onGoing}</span>
+        <span style="color:var(--gray-fg)">Discontinued: ${disco}</span>
+      </div>
+      <div class="stat-rows">${statRows}</div>
+    </div>`;
+  }).join("");
+}
+
+// ── Tab 3: Progress ───────────────────────────────────────────────
+function renderProgress(history) {
+  const norm = normalizeHistory(history);
+  renderTimeSeries(norm);
+  renderPersonProgress(norm);
+}
+
+// ── Normalize history (Sheet = flat, localStorage = nested groups) ──
+function normalizeHistory(raw) {
+  return (raw || []).map(h => ({
+    date:        h.date,
+    completed:   h.groups ? (h.groups.completed  || 0) : (h.completed  || 0),
+    filing:      h.groups ? (h.groups.filing     || 0) : (h.filing     || 0),
+    inprogress:  h.groups ? (h.groups.inprogress || 0) : (h.inprogress || 0),
+    dued:        h.groups ? (h.groups.dued       || 0) : (h.dued       || 0),
+    nottodo:     h.groups ? (h.groups.nottodo    || 0) : (h.nottodo    || 0),
+    total:       h.total || 0,
+    personDone:  h.personDone  || {},
+    personTotal: h.personTotal || {},
+  }));
+}
+
+function renderTimeSeries(history) {
+  if (!history || history.length === 0) return;
+
+  const norm = normalizeHistory(history);
+  const labels = norm.map(h => h.date);
+  const datasets = [
+    { label:"Completed",        data: norm.map(h=>h.completed),  borderColor:"#3B6D11", backgroundColor:"rgba(59,109,17,0.08)",  tension:.3, fill:true },
+    { label:"Filing Process",   data: norm.map(h=>h.filing),     borderColor:"#534AB7", backgroundColor:"rgba(83,74,183,0.08)",   tension:.3, fill:true },
+    { label:"In Progress",      data: norm.map(h=>h.inprogress), borderColor:"#185FA5", backgroundColor:"rgba(24,95,165,0.08)",   tension:.3, fill:true },
+    { label:"Dued not started", data: norm.map(h=>h.dued),       borderColor:"#854F0B", backgroundColor:"rgba(133,79,11,0.08)",   tension:.3, fill:true },
+    { label:"Not to do",        data: norm.map(h=>h.nottodo),    borderColor:"#9e9e99", backgroundColor:"rgba(158,158,153,0.08)", tension:.3, fill:true },
+  ];
+
+  if (tsChart) tsChart.destroy();
+  const ctx = document.getElementById("ts-chart").getContext("2d");
+  tsChart = new Chart(ctx, {
+    type:"line",
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ mode:"index", intersect:false }
+      },
+      scales:{
+        x:{ ticks:{ color:"#9e9e99", font:{size:11} }, grid:{ color:"rgba(0,0,0,0.05)" } },
+        y:{ ticks:{ color:"#9e9e99", font:{size:11} }, grid:{ color:"rgba(0,0,0,0.05)" }, beginAtZero:true }
+      }
+    }
+  });
+
+  const legendEl = document.getElementById("ts-legend");
+  if (legendEl) {
+    legendEl.innerHTML = datasets.map(d =>
+      `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);margin-right:12px">
+        <span style="width:10px;height:10px;border-radius:2px;background:${d.borderColor};display:inline-block"></span>${d.label}
+      </span>`
+    ).join("");
+  }
+}
+
+function renderPersonProgress(history) {
+  if (!allData.length) return;
+  const persons = [...new Set(allData.map(r=>r.responsible).filter(Boolean))].sort();
+  const today     = history.length > 0 ? history[history.length - 1] : null;
+  const yesterday = history.length >= 2 ? history[history.length - 2] : null;
+
+  document.getElementById("person-progress-grid").innerHTML = persons.map(p => {
+    const rows     = allData.filter(r => r.responsible === p);
+    const total    = rows.length;
+    const done     = rows.filter(r => r.group==="completed").length;
+    const filing   = rows.filter(r => r.group==="filing").length;
+    const inprog   = rows.filter(r => r.group==="inprogress").length;
+    const dued     = rows.filter(r => r.group==="dued").length;
+    const nottodo  = rows.filter(r => r.group==="nottodo").length;
+    const pct      = total ? Math.round(done/total*100) : 0;
+
+    const todayDone = today?.personDone?.[p] || 0;
+    const yestDone  = yesterday?.personDone?.[p] || 0;
+    const diff = todayDone - yestDone;
+    const diffHtml = diff > 0
+      ? `<span class="diff-badge diff-up">+${diff} จากเมื่อวาน</span>`
+      : diff < 0
+      ? `<span class="diff-badge diff-down">${diff} จากเมื่อวาน</span>`
+      : yesterday
+      ? `<span class="diff-badge diff-none">ไม่เปลี่ยนแปลง</span>`
+      : `<span class="diff-badge diff-none">วันแรก</span>`;
+
+    return `<div class="pp-card">
+      <h4>${p} ${diffHtml}</h4>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" style="width:${pct}%"></div>
+      </div>
+      <div class="pp-detail">
+        <span style="color:var(--success-fg);font-weight:600">✅ ${pct}% (${done}/${total})</span>
+        <span>📋 Filing ${filing}</span>
+        <span>🔵 In Prog ${inprog}</span>
+        <span>⏰ Dued ${dued}</span>
+        <span>⛔ N/A ${nottodo}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Tab switching ─────────────────────────────────────────────────
+function switchTab(tab) {
+  activeMainTab = tab;
+  document.getElementById("tab-table").style.display    = tab==="table"    ? "" : "none";
+  document.getElementById("tab-person").style.display   = tab==="person"   ? "" : "none";
+  document.getElementById("tab-progress").style.display = tab==="progress" ? "" : "none";
+  document.querySelectorAll(".main-tab").forEach((el,i) => {
+    el.classList.toggle("active", ["table","person","progress"][i] === tab);
+  });
+  if (tab === "progress") {
+    loadHistory().then(raw => {
+      const norm = normalizeHistory(raw);
+      renderTimeSeries(norm);
+      renderPersonProgress(norm);
+    });
+  }
+}
+
+function showBanner(msg, type) {
+  const el = document.getElementById("banner");
+  el.textContent = msg;
+  el.className = "banner " + type;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PASSWORD PROTECTION
+//  เปลี่ยนรหัสผ่านได้ที่ CORRECT_PASSWORD ด้านล่าง
+// ══════════════════════════════════════════════════════════════════
+const CORRECT_PASSWORD = "smsusu";
+const SESSION_KEY = "dash_auth_v1";
+
+function checkAuth() {
+  return sessionStorage.getItem(SESSION_KEY) === "ok";
+}
+
+function renderLoginScreen() {
+  document.body.innerHTML = `
+    <div id="login-wrap" style="
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background:var(--bg); font-family:'Sarabun',system-ui,sans-serif;
+    ">
+      <div style="
+        background:var(--surface); border:0.5px solid var(--border2);
+        border-radius:16px; padding:2.5rem 2rem; width:100%; max-width:360px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.08);
+      ">
+        <div style="text-align:center; margin-bottom:1.75rem;">
+          <div style="
+            width:52px; height:52px; border-radius:14px;
+            background:var(--info-bg); display:inline-flex;
+            align-items:center; justify-content:center; margin-bottom:1rem;
+          ">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--info-fg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h2 style="font-size:17px; font-weight:600; margin:0 0 4px; color:var(--text);">Dashboard สถานะการปิดงบ</h2>
+          <p style="font-size:12px; color:var(--text2); margin:0;">รอบปี 2568 — กรุณาใส่รหัสผ่านเพื่อเข้าใช้งาน</p>
+        </div>
+
+        <div style="margin-bottom:1rem;">
+          <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px;">รหัสผ่าน</label>
+          <input
+            id="pw-input" type="password" placeholder="กรอกรหัสผ่าน"
+            autocomplete="current-password"
+            style="
+              width:100%; padding:10px 12px; font-size:14px; font-family:inherit;
+              border:0.5px solid var(--border2); border-radius:10px;
+              background:var(--surface); color:var(--text); outline:none;
+              transition:border-color .15s; box-sizing:border-box;
+            "
+            onkeydown="if(event.key==='Enter') tryLogin()"
+            oninput="document.getElementById('pw-err').style.display='none'"
+            onfocus="this.style.borderColor='var(--info-fg)'"
+            onblur="this.style.borderColor='var(--border2)'"
+          >
+          <div id="pw-err" style="
+            display:none; font-size:12px; color:var(--danger-fg);
+            margin-top:6px; padding:6px 10px; background:var(--danger-bg);
+            border-radius:7px;
+          ">รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</div>
+        </div>
+
+        <button onclick="tryLogin()" style="
+          width:100%; padding:10px; font-size:14px; font-family:inherit;
+          font-weight:600; border:none; border-radius:10px;
+          background:var(--info-fg); color:#fff; cursor:pointer;
+          transition:opacity .15s;
+        " onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+          เข้าสู่ระบบ
+        </button>
+
+        <p style="text-align:center; font-size:11px; color:var(--text3); margin-top:1.25rem; margin-bottom:0;">
+          สำหรับทีมบัญชีเท่านั้น
+        </p>
+      </div>
+    </div>
+  `;
+  setTimeout(() => document.getElementById("pw-input")?.focus(), 50);
+}
+
+function tryLogin() {
+  const val = document.getElementById("pw-input")?.value || "";
+  if (val === CORRECT_PASSWORD) {
+    sessionStorage.setItem(SESSION_KEY, "ok");
+    location.reload();
+  } else {
+    const err = document.getElementById("pw-err");
+    if (err) err.style.display = "block";
+    const input = document.getElementById("pw-input");
+    if (input) {
+      input.value = "";
+      input.style.borderColor = "var(--danger-fg)";
+      input.focus();
+      setTimeout(() => { input.style.borderColor = "var(--border2)"; }, 1200);
+    }
+  }
+}
+
+// ── Seed historical data (15/03/2569) ลง Sheet ───────────────────
+async function seedHistoryIfNeeded() {
+  const seedDate = "2026-03-15";
+  try {
+    const params = new URLSearchParams({
+      action: "saveHistory",
+      date:   seedDate,
+      groups: JSON.stringify({
+        completed: 21, filing: 8, inprogress: 20,
+        dued: 58, nottodo: 50, total: 157
+      })
+    });
+    await fetch(API_URL + "?" + params.toString());
+  } catch(e) {
+    console.warn("seed failed:", e);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  await seedHistoryIfNeeded();
+  if (checkAuth()) {
+    loadData();
+  } else {
+    renderLoginScreen();
+  }
+});
+</script>
+</body>
+</html>
